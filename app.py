@@ -2,10 +2,10 @@ import streamlit as st
 import random
 
 # -----------------------
-# CONFIGURACIÓN INICIAL
+# CONFIG
 # -----------------------
 
-st.set_page_config(page_title="Asignador de Categorías", page_icon="🎯", layout="centered")
+st.set_page_config(page_title="Asignador de Categorías", page_icon="🎯")
 
 categorias = [
     "🚗 Ladrón de vehículo",
@@ -13,107 +13,113 @@ categorias = [
     "⚖️ Agresor sexual de mujeres"
 ]
 
-TOTAL_ALUMNOS = 50
-
-# -----------------------
-# FUNCIONES
-# -----------------------
-
-def generar_asignaciones(num_alumnos, categorias):
-    num_categorias = len(categorias)
-    base = num_alumnos // num_categorias
-    resto = num_alumnos % num_categorias
-
-    asignaciones = []
-
-    for i, categoria in enumerate(categorias):
-        cantidad = base + (1 if i < resto else 0)
-        asignaciones.extend([categoria] * cantidad)
-
-    random.shuffle(asignaciones)
-    return asignaciones
+MAX_ALUMNOS = 60
 
 # -----------------------
 # ESTADO
 # -----------------------
 
-if "asignaciones" not in st.session_state:
-    st.session_state.asignaciones = generar_asignaciones(TOTAL_ALUMNOS, categorias)
-
 if "usuarios" not in st.session_state:
-    st.session_state.usuarios = {}  # nombre -> categoría
+    st.session_state.usuarios = {}
+
+if "conteo" not in st.session_state:
+    st.session_state.conteo = {cat: 0 for cat in categorias}
 
 # -----------------------
-# ESTILO VISUAL
+# FUNCIONES
+# -----------------------
+
+def asignar_categoria():
+    conteo = st.session_state.conteo
+    
+    # Encontrar mínimo
+    min_valor = min(conteo.values())
+    
+    # Categorías menos usadas
+    candidatas = [cat for cat, c in conteo.items() if c == min_valor]
+    
+    # Elegir aleatoriamente entre las menos usadas
+    categoria = random.choice(candidatas)
+    
+    # Actualizar conteo
+    st.session_state.conteo[categoria] += 1
+    
+    return categoria
+
+
+def color_categoria(cat):
+    if "vehículo" in cat:
+        return "#2563eb"
+    elif "Carterista" in cat:
+        return "#059669"
+    else:
+        return "#dc2626"
+
+# -----------------------
+# ESTILO
 # -----------------------
 
 st.markdown("""
-    <style>
-    .titulo {
-        text-align: center;
-        font-size: 36px;
-        font-weight: bold;
-        margin-bottom: 10px;
-    }
-    .subtitulo {
-        text-align: center;
-        font-size: 18px;
-        color: gray;
-        margin-bottom: 30px;
-    }
-    .resultado {
-    font-size: 26px;
-    font-weight: bold;
-    text-align: center;
-    padding: 25px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #1f2937, #111827);
-    color: white;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+<style>
+.titulo {
+    text-align:center;
+    font-size:36px;
+    font-weight:bold;
 }
-    </style>
+.subtitulo {
+    text-align:center;
+    color:gray;
+    margin-bottom:20px;
+}
+</style>
 """, unsafe_allow_html=True)
 
 # -----------------------
-# INTERFAZ
+# UI
 # -----------------------
 
 st.markdown('<div class="titulo">🎯 Asignador de Categorías</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitulo">Introduce tu nombre y recibe tu caso</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitulo">Cada alumno solo puede obtener una</div>', unsafe_allow_html=True)
 
-nombre = st.text_input("Nombre del alumno")
-
-# -----------------------
-# BOTÓN DE ASIGNACIÓN
-# -----------------------
+nombre = st.text_input("Introduce tu nombre")
 
 if st.button("Obtener categoría"):
     
     if not nombre.strip():
-        st.warning("Por favor, introduce tu nombre")
+        st.warning("Introduce tu nombre")
     
     elif nombre in st.session_state.usuarios:
         categoria = st.session_state.usuarios[nombre]
-        st.markdown(f'<div class="resultado">Ya tienes asignado:<br>{categoria}</div>', unsafe_allow_html=True)
+        
+        color = color_categoria(categoria)
+        st.markdown(f"""
+        <div style="background:{color};padding:25px;border-radius:14px;color:white;text-align:center;font-size:26px;">
+        Ya tienes asignado:<br>{categoria}
+        </div>
+        """, unsafe_allow_html=True)
     
-    elif len(st.session_state.asignaciones) == 0:
-        st.error("No quedan categorías disponibles")
+    elif len(st.session_state.usuarios) >= MAX_ALUMNOS:
+        st.error("Se alcanzó el máximo de alumnos")
     
     else:
-        categoria = st.session_state.asignaciones.pop()
+        categoria = asignar_categoria()
         st.session_state.usuarios[nombre] = categoria
         
-        st.markdown(f'<div class="resultado">Tu categoría es:<br>{categoria}</div>', unsafe_allow_html=True)
+        color = color_categoria(categoria)
+        st.markdown(f"""
+        <div style="background:{color};padding:25px;border-radius:14px;color:white;text-align:center;font-size:26px;">
+        Tu categoría es:<br>{categoria}
+        </div>
+        """, unsafe_allow_html=True)
 
 # -----------------------
-# INFO EXTRA
+# INFO
 # -----------------------
 
 st.divider()
 
-st.write(f"👥 Alumnos asignados: {len(st.session_state.usuarios)} / {TOTAL_ALUMNOS}")
-st.write(f"📦 Categorías restantes: {len(st.session_state.asignaciones)}")
+st.write(f"👥 Asignados: {len(st.session_state.usuarios)} / {MAX_ALUMNOS}")
 
-# Opcional: ver lista (solo profesor)
-with st.expander("🔒 Ver asignaciones (profesor)"):
-    st.write(st.session_state.usuarios)
+st.write("📊 Reparto actual:")
+for cat, num in st.session_state.conteo.items():
+    st.write(f"- {cat}: {num}")
