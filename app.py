@@ -5,15 +5,16 @@ import random
 # CONFIG
 # -----------------------
 
-st.set_page_config(page_title="Asignador de Categorías", page_icon="🎯")
+st.set_page_config(page_title="Asignador", page_icon="🎯")
 
-categorias = [
+CATEGORIAS = [
     "🚗 Ladrón de vehículo",
     "👜 Carterista",
     "⚖️ Agresor sexual de mujeres"
 ]
 
 MAX_ALUMNOS = 60
+PASSWORD = "profe123"  # 🔑 cámbiala
 
 # -----------------------
 # ESTADO
@@ -23,7 +24,10 @@ if "usuarios" not in st.session_state:
     st.session_state.usuarios = {}
 
 if "conteo" not in st.session_state:
-    st.session_state.conteo = {cat: 0 for cat in categorias}
+    st.session_state.conteo = {cat: 0 for cat in CATEGORIAS}
+
+if "admin" not in st.session_state:
+    st.session_state.admin = False
 
 # -----------------------
 # FUNCIONES
@@ -32,16 +36,10 @@ if "conteo" not in st.session_state:
 def asignar_categoria():
     conteo = st.session_state.conteo
     
-    # Encontrar mínimo
     min_valor = min(conteo.values())
-    
-    # Categorías menos usadas
     candidatas = [cat for cat, c in conteo.items() if c == min_valor]
     
-    # Elegir aleatoriamente entre las menos usadas
     categoria = random.choice(candidatas)
-    
-    # Actualizar conteo
     st.session_state.conteo[categoria] += 1
     
     return categoria
@@ -75,23 +73,38 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------
-# UI
+# LOGIN PROFESOR (OCULTO)
 # -----------------------
 
-st.markdown('<div class="titulo">🎯 Asignador de Categorías</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitulo">Cada alumno solo puede obtener una</div>', unsafe_allow_html=True)
+with st.sidebar:
+    st.markdown("### 🔐 Acceso profesor")
+    pwd = st.text_input("Contraseña", type="password")
+    
+    if st.button("Entrar"):
+        if pwd == PASSWORD:
+            st.session_state.admin = True
+            st.success("Modo profesor activado")
+        else:
+            st.error("Contraseña incorrecta")
 
-nombre = st.text_input("Introduce tu nombre")
+# -----------------------
+# UI ALUMNO
+# -----------------------
 
-if st.button("Obtener categoría"):
+st.markdown('<div class="titulo">🎯 Asignación</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitulo">Introduce tu nombre y pulsa el botón</div>', unsafe_allow_html=True)
+
+nombre = st.text_input("Nombre")
+
+if st.button("Obtener asignación"):
     
     if not nombre.strip():
         st.warning("Introduce tu nombre")
     
     elif nombre in st.session_state.usuarios:
         categoria = st.session_state.usuarios[nombre]
-        
         color = color_categoria(categoria)
+        
         st.markdown(f"""
         <div style="background:{color};padding:25px;border-radius:14px;color:white;text-align:center;font-size:26px;">
         Ya tienes asignado:<br>{categoria}
@@ -99,13 +112,14 @@ if st.button("Obtener categoría"):
         """, unsafe_allow_html=True)
     
     elif len(st.session_state.usuarios) >= MAX_ALUMNOS:
-        st.error("Se alcanzó el máximo de alumnos")
+        st.error("Se alcanzó el máximo")
     
     else:
         categoria = asignar_categoria()
         st.session_state.usuarios[nombre] = categoria
         
         color = color_categoria(categoria)
+        
         st.markdown(f"""
         <div style="background:{color};padding:25px;border-radius:14px;color:white;text-align:center;font-size:26px;">
         Tu categoría es:<br>{categoria}
@@ -113,13 +127,21 @@ if st.button("Obtener categoría"):
         """, unsafe_allow_html=True)
 
 # -----------------------
-# INFO
+# PANEL PROFESOR
 # -----------------------
 
-st.divider()
+if st.session_state.admin:
+    st.divider()
+    st.subheader("📊 Panel del profesor")
 
-st.write(f"👥 Asignados: {len(st.session_state.usuarios)} / {MAX_ALUMNOS}")
+    st.write("### Reparto:")
+    for cat, num in st.session_state.conteo.items():
+        st.write(f"- {cat}: {num}")
 
-st.write("📊 Reparto actual:")
-for cat, num in st.session_state.conteo.items():
-    st.write(f"- {cat}: {num}")
+    st.write("### Alumnos:")
+    st.write(st.session_state.usuarios)
+
+    if st.button("🔄 Resetear todo"):
+        st.session_state.usuarios = {}
+        st.session_state.conteo = {cat: 0 for cat in CATEGORIAS}
+        st.success("Reiniciado")
