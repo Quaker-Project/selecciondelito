@@ -62,13 +62,15 @@ st.markdown("""
         margin-bottom: 30px;
     }
     .resultado {
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-        padding: 20px;
-        border-radius: 12px;
-        background-color: #f0f2f6;
-    }
+    font-size: 26px;
+    font-weight: bold;
+    text-align: center;
+    padding: 25px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
     </style>
 """, unsafe_allow_html=True)
 
